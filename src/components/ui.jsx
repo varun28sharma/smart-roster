@@ -59,16 +59,13 @@ export function Swatch({ status }) {
 export function Legend() {
   return (
     <div className="legend">
-      <span><span className="lg-box" />Working (blank)</span>
-      <span><span className="lg-box covering">TS</span>Covering another brand (initials)</span>
-      {Object.keys(STATUS_META).filter((s) => s !== 'WORK').map((s) => (
-        <span key={s}>
-          <Swatch status={s} />
-          {STATUS_META[s].label}
-        </span>
+      <span><span className="lg-track"><i className="b" /></span>Working</span>
+      <span><span className="lg-track"><i className="b" /><i className="d" /></span>Also covering another brand</span>
+      <span><span className="lg-track gap"><i className="b l" /><i className="b r" /></span>Weekly off</span>
+      {['LEAVE', 'COMP', 'HOL', 'UNAV'].map((s) => (
+        <span key={s}><span className={`lg-blk ${s}`}>{STATUS_META[s].code}</span>{STATUS_META[s].label}</span>
       ))}
-      <span><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--ink)', marginRight: 4 }} />manual edit (kept on regenerate)</span>
-      <span><span style={{ display: 'inline-block', width: 12, height: 12, boxShadow: 'inset 0 0 0 2px var(--err)', marginRight: 4, verticalAlign: 'middle' }} />involved in an error</span>
+      <span><span className="lg-pin" />Edited by hand</span>
     </div>
   );
 }

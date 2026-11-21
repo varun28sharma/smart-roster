@@ -3,10 +3,6 @@ import { DOW, dow, dayLabel, monthLabel } from '../engine/dates.js';
 import { STATUS_META, serviceLabel, shiftOf } from '../engine/model.js';
 import { Legend, Swatch } from './ui.jsx';
 
-export function brandInitials(name = '') {
-  const words = name.split(/\s+/).filter(Boolean);
-  return words.length > 1 ? (words[0][0] + words[1][0]).toUpperCase() : name.slice(0, 2);
-}
 
 export function empSubtitle(e, idx) {
   const brands = [...new Set((idx.primaryByEmp.get(e.id) || []).map((sid) => idx.brandById.get(idx.serviceById.get(sid)?.brandId)?.name))];
@@ -15,6 +11,14 @@ export function empSubtitle(e, idx) {
   if (brands.length) parts.push(brands.join(', '));
   if (shiftOf(e) !== 'GEN') parts.push(`${shiftOf(e)} shift`);
   return parts.join(' · ');
+}
+
+const CAL_SHORT = { ALL_DAYS: 'All 365 days', DAILY_NO_PH: 'Daily, holidays off', MON_SAT_NO_PH: 'Mon–Sat', MON_FRI_NO_PH: 'Mon–Fri' };
+
+/** Column classes shared by header and body: weekend bands and Monday week dividers. */
+function dayCls(d, days) {
+  const wd = dow(d);
+  return `${wd === 0 || wd === 6 ? 'we' : ''} ${wd === 1 && d !== days[0] ? 'wk' : ''}`;
 }
 
 function DayHeaders({ days, idx, selection, onDay, extraRow }) {
@@ -28,12 +32,13 @@ function DayHeaders({ days, idx, selection, onDay, extraRow }) {
           return (
             <th
               key={d}
-              className={`day-h ${wd === 0 || wd === 6 ? 'weekend' : ''} ${hol ? 'holiday' : ''} ${selection?.date === d && selection?.kind === 'day' ? 'selected' : ''}`}
-              title={hol ? `${dayLabel(d)} · ${hol.name}` : dayLabel(d)}
+              className={`day-h ${dayCls(d, days)} ${wd === 0 || wd === 6 ? 'weekend' : ''} ${hol ? 'holiday' : ''} ${selection?.date === d && selection?.kind === 'day' ? 'selected' : ''}`}
+              title={hol ? `${dayLabel(d)}, ${hol.name}` : dayLabel(d)}
               onClick={() => onDay(d)}
             >
+              <div className="dn">{DOW[wd][0]}</div>
               <div>{Number(d.slice(8))}</div>
-              <div className="dn">{hol ? 'PH' : DOW[wd].slice(0, 2)}</div>
+              {hol && <div className="ph" />}
             </th>
           );
         })}
@@ -83,7 +88,7 @@ export function EmployeeGrid({ employees, st, issuesIndex, selection, onCell, on
               cell: (d) => {
                 const n = gapsOn(d).length;
                 return (
-                  <th key={d} className={`cov-h ${n ? 'bad' : 'good'}`} onClick={() => onDay(d)} title={n ? `${n} process(es) short` : 'All required processes covered'}>
+                  <th key={d} className={`cov-h ${dayCls(d, days)} ${n ? 'bad' : 'good'}`} onClick={() => onDay(d)} title={n ? `${n} process(es) short` : 'All required processes covered'}>
                     {n || ''}
                   </th>
                 );
@@ -123,41 +128,39 @@ function PodRows({ pod, emps, st, issuesIndex, selection, onCell, onEmployee }) 
               <span>{empSubtitle(e, idx)}</span>
             </div>
           </td>
-          {days.map((d) => {
-            const s = st.status(e.id, d);
-            const covers = s === 'WORK' ? st.coversBy(e.id, d) : [];
-            const pinned = st.isPinned(e.id, d);
-            const flagged = issuesIndex.flagged.has(`${e.id}|${d}`);
-            const sel = selection?.kind === 'cell' && selection.employeeId === e.id && selection.date === d;
-            const wd = dow(d);
-            const tip = [
-              `${e.name} · ${dayLabel(d)}`,
-              STATUS_META[s].label,
-              ...covers.map((c) => `Covering ${serviceLabel(idx.serviceById.get(c.serviceId), idx)}`),
-              pinned ? 'Manual edit' : '',
-            ].filter(Boolean).join('\n');
-            // Working is the default state, so it stays blank; only exceptions carry a mark.
-            let label = '';
-            if (s !== 'WORK') label = STATUS_META[s].code;
-            else if (covers.length) {
-              label = brandInitials(idx.brandById.get(idx.serviceById.get(covers[0].serviceId)?.brandId)?.name);
-              if (covers.length > 1) label += `+${covers.length - 1}`;
-            }
-            const cls = [
-              'cell',
-              s,
-              covers.length ? 'covering' : '',
-              s === 'WORK' && (wd === 0 || wd === 6) ? 'wknd' : '',
-              sel ? 'sel' : '',
-              flagged ? 'flag' : '',
-            ].join(' ');
-            return (
-              <td key={d} className={cls} title={tip} onClick={() => onCell(e.id, d)}>
-                {label && <span className="pip">{label}</span>}
-                {pinned && <span className="pin" />}
-              </td>
-            );
-          })}
+          {(() => {
+            // Each row is a shift track: consecutive days with the same status join
+            // into one segment (thin bar for work, solid block for absences);
+            // weekly offs are simply gaps.
+            const statuses = days.map((d) => st.status(e.id, d));
+            return days.map((d, i) => {
+              const s = statuses[i];
+              const joinL = i > 0 && statuses[i - 1] === s;
+              const joinR = i < days.length - 1 && statuses[i + 1] === s;
+              const covers = s === 'WORK' ? st.coversBy(e.id, d) : [];
+              const pinned = st.isPinned(e.id, d);
+              const flagged = issuesIndex.flagged.has(`${e.id}|${d}`);
+              const sel = selection?.kind === 'cell' && selection.employeeId === e.id && selection.date === d;
+              const tip = [
+                `${e.name}, ${dayLabel(d)}`,
+                STATUS_META[s].label,
+                ...covers.map((c) => `Covering ${serviceLabel(idx.serviceById.get(c.serviceId), idx)}`),
+                pinned ? 'Manual edit' : '',
+              ].filter(Boolean).join('\n');
+              const seg = s === 'OFF' ? null : (
+                <span className={`seg ${s === 'WORK' ? 'bar' : 'blk'} ${joinL ? 'jl' : ''} ${joinR ? 'jr' : ''}`}>
+                  {s !== 'WORK' && !joinL ? STATUS_META[s].code : ''}
+                </span>
+              );
+              return (
+                <td key={d} className={`cell ${s} ${dayCls(d, days)} ${sel ? 'sel' : ''} ${flagged ? 'flag' : ''}`} title={tip} onClick={() => onCell(e.id, d)}>
+                  {seg}
+                  {covers.length > 0 && <span className={`cv ${covers.length > 1 ? 'two' : ''}`} />}
+                  {pinned && <span className="pin" />}
+                </td>
+              );
+            });
+          })()}
         </tr>
       ))}
     </>
@@ -184,24 +187,27 @@ export function CoverageTable({ services, st, coverage, selection, onSvcDay, onD
                   <div className="emp-name">
                     <b>{serviceLabel(s, idx)}</b>
                     <span>
-                      {cal?.preset ? cal.preset.replace(/_/g, ' ').toLowerCase() : 'custom'} · min {s.minStaff} · {assigned.length} assigned
-                      {shiftOf(s) !== 'GEN' ? ` · ${shiftOf(s)}` : ''}
+                      {CAL_SHORT[cal?.preset] ?? 'Custom days'}, needs {s.minStaff}, {assigned.length} assigned
+                      {shiftOf(s) !== 'GEN' ? `, ${shiftOf(s).toLowerCase()} shift` : ''}
                     </span>
                   </div>
                 </td>
                 {days.map((d) => {
                   const c = coverage[s.id]?.[d];
-                  if (!c || !c.required) return <td key={d} className="ccell na" title={`${dayLabel(d)}: not operating`}>·</td>;
-                  const cls = c.count === 0 ? 'zero' : c.count < c.required ? 'short' : c.count > c.required ? 'over' : 'ok';
+                  if (!c || !c.required) return <td key={d} className={`ccell na ${dayCls(d, days)}`} title={`${dayLabel(d)}: not operating`} />;
+                  const cls = c.count === 0 ? 'zero' : c.count < c.required ? 'short' : 'ok';
                   const names = [...c.primary, ...c.covers.map((x) => x + '*')].map((id) => idx.empById.get(id.replace('*', ''))?.name + (id.endsWith('*') ? ' (cover)' : ''));
+                  // Met days are a quiet dot (or the headcount when more than one is needed);
+                  // only shortfalls show numbers.
+                  const label = cls === 'ok' ? (c.required > 1 ? c.count : '') : `${c.count}/${c.required}`;
                   return (
                     <td
                       key={d}
-                      className={`ccell ${cls} ${c.covers.length ? 'covered' : ''} ${selection?.kind === 'svcday' && selection.serviceId === s.id && selection.date === d ? 'sel' : ''}`}
-                      title={`${serviceLabel(s, idx)} · ${dayLabel(d)}\n${c.count}/${c.required} working\n${names.join('\n') || 'Nobody'}`}
+                      className={`ccell ${cls} ${dayCls(d, days)} ${c.covers.length ? 'covered' : ''} ${selection?.kind === 'svcday' && selection.serviceId === s.id && selection.date === d ? 'sel' : ''}`}
+                      title={`${serviceLabel(s, idx)}, ${dayLabel(d)}\n${c.count}/${c.required} working\n${names.join('\n') || 'Nobody'}`}
                       onClick={() => onSvcDay(s.id, d)}
                     >
-                      {c.count}/{c.required}
+                      <span className="cmark">{label}</span>
                     </td>
                   );
                 })}
@@ -217,11 +223,11 @@ export function CoverageTable({ services, st, coverage, selection, onSvcDay, onD
 export function CoverageLegend() {
   return (
     <div className="legend">
-      <span><span className="sw" style={{ background: 'var(--ok-soft)', color: 'var(--ok)' }}>1</span>working / required</span>
-      <span><span className="sw" style={{ background: 'var(--err-soft)', color: 'var(--err)' }}>!</span>under-staffed</span>
-      <span><span className="sw" style={{ background: 'var(--err)', color: '#fff' }}>0</span>no coverage</span>
-      <span><span className="sw" style={{ boxShadow: 'inset 0 -3px 0 var(--brand)' }} />includes a cover</span>
-      <span><span className="sw" style={{ background: '#fbfaf7', color: '#c4c1b8' }}>·</span>not operating</span>
+      <span><span className="lg-cov ok" />Covered (number = people when more than 1 needed)</span>
+      <span><span className="lg-cov ok cov" />Covered with help from another brand</span>
+      <span><span className="lg-cov short">1/2</span>Under-staffed</span>
+      <span><span className="lg-cov zero">0/1</span>Nobody available</span>
+      <span><span className="lg-cov" />Closed</span>
     </div>
   );
 }
