@@ -177,21 +177,24 @@ export default function RosterPage({ selection, setSelection, view, setView, got
   return (
     <div>
       <div className="toolbar">
-        <div className="month-nav">
-          <button className="btn sm" onClick={() => store.setMonth(shiftMonth(month, -1))} aria-label="Previous month">‹</button>
-          <strong>{monthLabel(month)}</strong>
-          <button className="btn sm" onClick={() => store.setMonth(shiftMonth(month, 1))} aria-label="Next month">›</button>
+        <div className="month-title">
+          <h1>{new Date(`${month}-01T00:00:00Z`).toLocaleString('en', { month: 'long', timeZone: 'UTC' })}</h1>
+          <span className="year">{month.slice(0, 4)}</span>
+          <span className="month-arrows">
+            <button className="icon-btn" onClick={() => store.setMonth(shiftMonth(month, -1))} aria-label="Previous month">‹</button>
+            <button className="icon-btn" onClick={() => store.setMonth(shiftMonth(month, 1))} aria-label="Next month">›</button>
+          </span>
         </div>
-        <button className="btn primary" onClick={store.generate} title="Manual edits and manual covers are kept">
-          {roster ? 'Regenerate (keep manual edits)' : 'Generate roster'}
-        </button>
-        <button className="btn" onClick={store.undo} disabled={!store.canUndo}>Undo</button>
         <div className="spacer" />
+        <button className="btn ghost" onClick={store.undo} disabled={!store.canUndo}>Undo</button>
+        <button className="btn" onClick={store.generate} title="Manual edits and manual covers are kept">
+          {roster ? 'Regenerate' : 'Generate roster'}
+        </button>
         {roster && (
           <>
             <button className="btn" onClick={exportCsv}>Export CSV</button>
             <button
-              className="btn"
+              className="btn primary"
               onClick={store.publish}
               disabled={summary.errors > 0}
               title={summary.errors > 0 ? 'Resolve all errors before publishing' : 'Freeze this version; later changes are tracked'}
@@ -228,8 +231,7 @@ export default function RosterPage({ selection, setSelection, view, setView, got
           )}
           <span className="sl-item"><b>{summary.covers}</b> cross-covers</span>
           <span className="sl-item muted">
-            {roster.published ? 'Published' : 'Draft'} v{roster.version}
-            {roster.generatedAt ? ` · generated ${new Date(roster.generatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}
+            {`${roster.published ? 'Published' : 'Draft'} ${roster.version}${roster.generatedAt ? `, generated ${new Date(roster.generatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}`}
           </span>
         </div>
       )}

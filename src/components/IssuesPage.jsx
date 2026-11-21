@@ -43,7 +43,7 @@ export default function IssuesPage({ goto }) {
   return (
     <div style={{ maxWidth: 980 }}>
       <div className="row" style={{ marginBottom: 6 }}>
-        <h2>Conflicts · {monthLabel(month)}</h2>
+        <h2>Conflicts in {monthLabel(month)}</h2>
       </div>
       <p className="muted" style={{ marginTop: 0 }}>
         Errors are mandatory constraints (client coverage, weekly offs, impossible assignments) and block publishing.

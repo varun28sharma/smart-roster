@@ -275,7 +275,7 @@ export function DefaultInspector({ goto, onCell, onSvcDay }) {
         <div className="card-pad">
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
             <h3 style={{ color: 'var(--err)' }}>{errors.length} to resolve</h3>
-            <button className="btn sm ghost" onClick={() => goto('issues')}>All conflicts →</button>
+            <button className="btn sm ghost" onClick={() => goto('issues')}>See all</button>
           </div>
           {errors.slice(0, 4).map((x) => <IssueCard key={x.id} issue={x} compact />)}
         </div>

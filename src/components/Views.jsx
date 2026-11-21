@@ -109,7 +109,7 @@ function PodRows({ pod, emps, st, issuesIndex, selection, onCell, onEmployee }) 
       {pod && (
         <tr className="pod-row">
           <td colSpan={days.length + 1}>
-            {pod.name} <span className="muted small">· lead {idx.empById.get(pod.leadId)?.name ?? '—'} · {emps.length} people</span>
+            {pod.name} <span className="muted small" style={{ marginLeft: 8 }}>{idx.empById.get(pod.leadId)?.name ?? 'No lead'} leads {emps.length} people</span>
           </td>
         </tr>
       )}
@@ -153,7 +153,7 @@ function PodRows({ pod, emps, st, issuesIndex, selection, onCell, onEmployee }) 
             ].join(' ');
             return (
               <td key={d} className={cls} title={tip} onClick={() => onCell(e.id, d)}>
-                {label}
+                {label && <span className="pip">{label}</span>}
                 {pinned && <span className="pin" />}
               </td>
             );
