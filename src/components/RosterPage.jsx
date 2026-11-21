@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../store/store.jsx';
 import { monthLabel, shiftMonth } from '../engine/dates.js';
 import { rosterToCSV, diffSincePublish } from '../engine/changes.js';
-import { EmployeeGrid, CoverageTable, CoverageLegend, EmployeeCalendar, DayBoard } from './Views.jsx';
+import { EmployeeGrid, MonthCalendar, CoverageTable, CoverageLegend, EmployeeCalendar, DayBoard } from './Views.jsx';
 import { CellInspector, SvcDayInspector, DefaultInspector } from './Inspector.jsx';
 import { downloadText } from './ui.jsx';
 
@@ -44,7 +44,16 @@ export default function RosterPage({ selection, setSelection, view, setView, got
   const [brandId, setBrandId] = useState(data.brands[0]?.id);
   const [processId, setProcessId] = useState(data.processes[0]?.id);
   const [empId, setEmpId] = useState(data.employees[0]?.id);
-  const selDay = selection?.date && selection.date.startsWith(month) ? selection.date : days[0];
+  const [layout, setLayout] = useState('calendar'); // calendar | rows, for company and pod views
+  const today = new Date().toISOString().slice(0, 10);
+  const selDay = selection?.date && selection.date.startsWith(month) ? selection.date : days.includes(today) ? today : days[0];
+  const onPickDay = (date) => setSelection({ kind: 'day', date });
+  const layoutToggle = (
+    <div className="seg-toggle" role="group" aria-label="Layout">
+      <button className={layout === 'calendar' ? 'on' : ''} onClick={() => setLayout('calendar')}>Calendar</button>
+      <button className={layout === 'rows' ? 'on' : ''} onClick={() => setLayout('rows')}>By person</button>
+    </div>
+  );
 
   const changes = useMemo(() => (roster?.published ? diffSincePublish(data, roster) : []), [data, roster]);
 
@@ -67,7 +76,21 @@ export default function RosterPage({ selection, setSelection, view, setView, got
     }
     switch (view) {
       case 'company':
-        return <EmployeeGrid employees={idx.activeEmployees} st={st} issuesIndex={issuesIndex} selection={selection} onCell={onCell} onDay={onDay} onEmployee={onEmployee} />;
+        return (
+          <div className="col" style={{ gap: 12 }}>
+            <div className="row">
+              {layoutToggle}
+              <span className="muted small">
+                {layout === 'calendar' ? 'Each day shows only who is away or covering. Click a day for details.' : 'One row per person across the month.'}
+              </span>
+            </div>
+            {layout === 'calendar' ? (
+              <MonthCalendar employees={idx.activeEmployees} st={st} issuesIndex={issuesIndex} selectedDay={selection?.kind === 'day' ? selDay : null} onPickDay={onPickDay} onCell={onCell} />
+            ) : (
+              <EmployeeGrid employees={idx.activeEmployees} st={st} issuesIndex={issuesIndex} selection={selection} onCell={onCell} onDay={onPickDay} onEmployee={onEmployee} />
+            )}
+          </div>
+        );
       case 'pod': {
         const pod = idx.podById.get(podId);
         const emps = idx.activeEmployees.filter((e) => e.podId === podId);
@@ -78,9 +101,14 @@ export default function RosterPage({ selection, setSelection, view, setView, got
               <select className="input" value={podId} onChange={(e) => setPodId(e.target.value)}>
                 {data.pods.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <span className="muted small">Lead: <b>{idx.empById.get(pod?.leadId)?.name ?? 'none'}</b> · {emps.length} people · {[...new Set(idx.activeServices.filter((s) => svcs.has(s.id)).map((s) => s.brandId))].length} brands</span>
+              {layoutToggle}
+              <span className="muted small">{idx.empById.get(pod?.leadId)?.name ?? 'No lead'} leads {emps.length} people across {[...new Set(idx.activeServices.filter((s) => svcs.has(s.id)).map((s) => s.brandId))].length} brands</span>
             </div>
-            <EmployeeGrid employees={emps} st={st} issuesIndex={issuesIndex} selection={selection} onCell={onCell} onDay={onDay} onEmployee={onEmployee} groupByPod={false} scopeServices={svcs} />
+            {layout === 'calendar' ? (
+              <MonthCalendar employees={emps} st={st} issuesIndex={issuesIndex} selectedDay={selection?.kind === 'day' ? selDay : null} onPickDay={onPickDay} onCell={onCell} scopeServices={svcs} />
+            ) : (
+              <EmployeeGrid employees={emps} st={st} issuesIndex={issuesIndex} selection={selection} onCell={onCell} onDay={onPickDay} onEmployee={onEmployee} groupByPod={false} scopeServices={svcs} />
+            )}
             <CoverageTable services={idx.activeServices.filter((s) => svcs.has(s.id))} st={st} coverage={coverage} selection={selection} onSvcDay={onSvcDay} onDay={onDay} title="Pod coverage" />
             <CoverageLegend />
           </div>
@@ -171,7 +199,7 @@ export default function RosterPage({ selection, setSelection, view, setView, got
     ) : selection?.kind === 'svcday' && selection.date.startsWith(month) ? (
       <SvcDayInspector serviceId={selection.serviceId} date={selection.date} onClose={() => setSelection(null)} onCell={onCell} />
     ) : (
-      <DefaultInspector key={month} goto={goto} onCell={onCell} onSvcDay={onSvcDay} />
+      <DefaultInspector key={month} date={selDay} onPickDay={onPickDay} goto={goto} onCell={onCell} onSvcDay={onSvcDay} />
     );
 
   return (

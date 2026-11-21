@@ -367,3 +367,60 @@ table.data tr:hover td { background: #fafbf8; }
   table.grid .sticky-col { min-width: 128px; max-width: 128px; }
 }
 
+
+/* ---------- Month calendar of exceptions ----------
+   Seven calm columns. A day is a white tile; only people who are away or
+   covering appear, as initials. Weekends sit on the page tone, problems get
+   a red edge. */
+.seg-toggle { display: inline-flex; padding: 3px; background: #e1e4de; border-radius: 999px; }
+.seg-toggle button { border: 0; background: none; padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg-toggle button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(27, 31, 42, .08); }
+
+.mcal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.mcal-dh { font-size: 12px; font-weight: 600; color: var(--muted); padding: 0 4px 2px; }
+.mcal-dh.we { color: var(--ink-2); }
+.mcal-day {
+  background: var(--surface); border-radius: 12px; padding: 10px 11px 9px; min-height: 112px;
+  display: flex; flex-direction: column; gap: 6px; cursor: pointer; position: relative;
+  transition: box-shadow .12s;
+}
+.mcal-day:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
+.mcal-day.we { background: #f7f8f4; }
+.mcal-day.sel { box-shadow: inset 0 0 0 2px var(--ink); }
+.mcal-day.bad { box-shadow: inset 3px 0 0 var(--err); }
+.mcal-day.bad.sel { box-shadow: inset 3px 0 0 var(--err), inset 0 0 0 2px var(--ink); }
+.mcal-top { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.mcal-n { font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.mcal-day.we .mcal-n { color: var(--ink-2); }
+.mcal-gap { font-size: 11px; font-weight: 700; color: var(--err); background: var(--err-soft); padding: 1px 7px; border-radius: 999px; }
+.mcal-hol { font-size: 11.5px; font-weight: 600; color: var(--s-hol-ink); margin-top: -2px; }
+.mcal-avs { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; flex: 1; }
+.mcal-foot { font-size: 11px; color: var(--faint); }
+.mcal-pad { min-height: 112px; }
+
+.av {
+  all: unset; display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  font-size: 10px; font-weight: 700; letter-spacing: -0.02em; cursor: pointer; box-sizing: border-box;
+}
+.av:hover { box-shadow: 0 0 0 2px var(--ink); }
+.av:focus-visible { box-shadow: 0 0 0 2px var(--marigold); }
+.av.OFF { background: var(--s-off); color: var(--s-off-ink); }
+.av.LEAVE { background: var(--s-leave); color: var(--s-leave-ink); }
+.av.COMP { background: var(--s-comp); color: var(--s-comp-ink); }
+.av.UNAV { background: var(--s-unav); color: var(--s-unav-ink); }
+.av.HOL { background: var(--s-hol); color: var(--s-hol-ink); }
+.av.COVER { background: var(--surface); color: var(--marigold-ink); box-shadow: inset 0 0 0 2px var(--marigold); }
+.av.COVER:hover { box-shadow: inset 0 0 0 2px var(--marigold), 0 0 0 2px var(--ink); }
+.av.IN { background: var(--ok-soft); color: var(--ok); }
+.av.more { background: none; color: var(--muted); width: auto; padding: 0 4px; cursor: default; }
+.av.more:hover { box-shadow: none; }
+.av.flag { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--err); }
+.av.lg { width: 20px; height: 20px; font-size: 8.5px; margin-right: 6px; vertical-align: middle; cursor: default; }
+.av.lg:hover { box-shadow: none; }
+
+@media (max-width: 900px) {
+  .mcal { gap: 4px; }
+  .mcal-day, .mcal-pad { min-height: 92px; padding: 6px; }
+  .av { width: 20px; height: 20px; font-size: 8.5px; }
+  .mcal-n { font-size: 15px; }
+}

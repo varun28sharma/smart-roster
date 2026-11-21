@@ -250,12 +250,10 @@ export function SvcDayInspector({ serviceId, date, onClose, onCell }) {
 }
 
 /** Default side panel: open conflicts (if any), then a snapshot of one day. */
-export function DefaultInspector({ goto, onCell, onSvcDay }) {
+export function DefaultInspector({ date, onPickDay, goto, onCell, onSvcDay }) {
   const { validation, roster, month } = useStore();
   const { st, coverage } = validation;
   const { idx, days } = st;
-  const today = new Date().toISOString().slice(0, 10);
-  const [date, setDate] = useState(days.includes(today) ? today : days[0]);
   const d = days.includes(date) ? date : days[0];
   const i = days.indexOf(d);
   const errors = validation.issues.filter((x) => x.severity === 'error');
@@ -285,8 +283,8 @@ export function DefaultInspector({ goto, onCell, onSvcDay }) {
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <h3>{dayLabel(d)}</h3>
           <div className="row" style={{ gap: 2 }}>
-            <button className="btn sm ghost" disabled={i <= 0} onClick={() => setDate(days[i - 1])} aria-label="Previous day">‹</button>
-            <button className="btn sm ghost" disabled={i >= days.length - 1} onClick={() => setDate(days[i + 1])} aria-label="Next day">›</button>
+            <button className="btn sm ghost" disabled={i <= 0} onClick={() => onPickDay(days[i - 1])} aria-label="Previous day">‹</button>
+            <button className="btn sm ghost" disabled={i >= days.length - 1} onClick={() => onPickDay(days[i + 1])} aria-label="Next day">›</button>
           </div>
         </div>
         <div className="small muted" style={{ marginTop: 2 }}>

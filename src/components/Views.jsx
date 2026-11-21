@@ -15,6 +15,99 @@ export function empSubtitle(e, idx) {
 
 const CAL_SHORT = { ALL_DAYS: 'All 365 days', DAILY_NO_PH: 'Daily, holidays off', MON_SAT_NO_PH: 'Mon–Sat', MON_FRI_NO_PH: 'Mon–Fri' };
 
+const initials = (name = '') => name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+const AVATAR_LIMIT = 9;
+
+/**
+ * Month calendar of exceptions. Working is the normal state, so a day only
+ * shows the people who are NOT doing their usual job: off, on leave,
+ * comp-off, unavailable, or covering another brand. When most people are
+ * away (Sundays, holidays) it flips and shows who IS working instead.
+ */
+export function MonthCalendar({ employees, st, issuesIndex, selectedDay, onPickDay, onCell, scopeServices }) {
+  const { idx, days } = st;
+  const lead = (dow(days[0]) + 6) % 7; // Monday-first
+  const ids = new Set(employees.map((e) => e.id));
+
+  return (
+    <div className="mcal-wrap">
+      <div className="mcal">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((n, i) => (
+          <div key={n} className={`mcal-dh ${i >= 5 ? 'we' : ''}`}>{n}</div>
+        ))}
+        {Array.from({ length: lead }, (_, i) => <div key={`pad${i}`} className="mcal-pad" />)}
+        {days.map((d) => {
+          const people = employees.map((e) => ({ e, s: st.status(e.id, d) }));
+          const working = people.filter((p) => p.s === 'WORK');
+          const away = people.filter((p) => p.s !== 'WORK');
+          const covering = working
+            .map((p) => ({ ...p, covers: st.coversBy(p.e.id, d) }))
+            .filter((p) => p.covers.length);
+          const gaps = (issuesIndex.gapsByDay.get(d) || []).filter((g) => !scopeServices || scopeServices.has(g.serviceId));
+          const hol = idx.holidays.get(d);
+          const wd = dow(d);
+          const inverted = away.length > working.length;
+          const order = { LEAVE: 0, UNAV: 1, COMP: 2, HOL: 3, OFF: 4 };
+          const shown = inverted
+            ? working.map((p) => ({ ...p, kind: 'IN' }))
+            : [
+              ...away.sort((a, b) => order[a.s] - order[b.s]).map((p) => ({ ...p, kind: p.s })),
+              ...covering.map((p) => ({ ...p, kind: 'COVER' })),
+            ];
+          const extra = shown.length - AVATAR_LIMIT;
+          const flaggedHere = (eid) => issuesIndex.flagged.has(`${eid}|${d}`);
+          return (
+            <div
+              key={d}
+              role="button"
+              tabIndex={0}
+              className={`mcal-day ${wd === 0 || wd === 6 ? 'we' : ''} ${selectedDay === d ? 'sel' : ''} ${gaps.length ? 'bad' : ''}`}
+              onClick={() => onPickDay(d)}
+              onKeyDown={(ev) => (ev.key === 'Enter' || ev.key === ' ') && onPickDay(d)}
+            >
+              <div className="mcal-top">
+                <span className="mcal-n">{Number(d.slice(8))}</span>
+                {gaps.length > 0 && <span className="mcal-gap" title={`${gaps.length} process(es) short`}>{gaps.length} short</span>}
+              </div>
+              {hol && <div className="mcal-hol">{hol.name}</div>}
+              <div className="mcal-avs">
+                {shown.slice(0, AVATAR_LIMIT).map((p) => {
+                  const tip = p.kind === 'COVER'
+                    ? `${p.e.name} covers ${p.covers.map((c) => serviceLabel(idx.serviceById.get(c.serviceId), idx)).join(', ')}`
+                    : p.kind === 'IN' ? `${p.e.name} working` : `${p.e.name}: ${STATUS_META[p.s].label.toLowerCase()}`;
+                  return (
+                    <button
+                      key={p.e.id + p.kind}
+                      className={`av ${p.kind} ${flaggedHere(p.e.id) ? 'flag' : ''}`}
+                      title={tip}
+                      onClick={(ev) => { ev.stopPropagation(); onCell(p.e.id, d); }}
+                    >
+                      {initials(p.e.name)}
+                    </button>
+                  );
+                })}
+                {extra > 0 && <span className="av more">+{extra}</span>}
+              </div>
+              <div className="mcal-foot">
+                {inverted ? `${working.length} working, rest closed` : `${working.length} of ${ids.size} working`}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="legend">
+        <span><span className="av lg OFF">AB</span>Weekly off</span>
+        <span><span className="av lg LEAVE">AB</span>Leave</span>
+        <span><span className="av lg COMP">AB</span>Comp-off</span>
+        <span><span className="av lg UNAV">AB</span>Unavailable</span>
+        <span><span className="av lg HOL">AB</span>Holiday off</span>
+        <span><span className="av lg COVER">AB</span>Covering another brand</span>
+        <span><span className="av lg IN">AB</span>Working (shown on days most people are off)</span>
+      </div>
+    </div>
+  );
+}
+
 /** Column classes shared by header and body: weekend bands and Monday week dividers. */
 function dayCls(d, days) {
   const wd = dow(d);
