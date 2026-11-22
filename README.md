@@ -2,7 +2,7 @@
 
 A browser-based roster management tool for a multi-brand CX operations team. It plans monthly rosters across brands, processes and pods, checks every client's coverage rules, flags conflicts with reasons, and suggests fixes that it has already tested.
 
-**Live app:** _add your Vercel URL here_ · **Demo video:** _add link_
+**Live app:** https://smart-roster-flax.vercel.app · **Demo video:** _add link_
 
 The sample dataset has 32 employees, 4 pods, 24 brands, 4 processes, mixed operating calendars and December 2026 leave. The app opens on a generated roster for that month.
 
